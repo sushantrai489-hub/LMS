@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Library Management System</title>
+<style>
+:root{--bg:#f3f5f2;--card:#fff;--tx:#17211c;--mu:#66736c;--pr:#1f5f4a;--bd:#dde3de;--dg:#b42318;--ok:#1a7f4b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1512;--card:#18211c;--tx:#e7efe9;--mu:#93a39a;--pr:#3aa07c;--bd:#2a3730;--dg:#f0776b;--ok:#4cc38a}}
+:root[data-theme="dark"]{--bg:#0f1512;--card:#18211c;--tx:#e7efe9;--mu:#93a39a;--pr:#3aa07c;--bd:#2a3730;--dg:#f0776b;--ok:#4cc38a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+h1,h2,h3{font-family:Georgia,"Times New Roman",serif;font-weight:700}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;background:var(--pr);color:#fff;position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+header .b.g{color:#fff;border-color:#fff8}
+h1{font-size:18px;margin:0}h2{margin:0 0 12px;font-size:21px}h3{margin:0 0 10px;font-size:16px}
+nav{display:flex;gap:6px;overflow-x:auto;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--bd)}
+nav button{white-space:nowrap}
+main{max-width:1000px;margin:0 auto;padding:16px}
+.b{background:var(--pr);color:#fff;border:1px solid var(--pr);border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
+.b:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--pr);outline-offset:2px}
+.b.g{background:transparent;color:var(--tx);border-color:var(--bd)}
+nav .b.g.on{background:var(--pr);color:#fff;border-color:var(--pr)}
+.b.d{background:var(--dg);border-color:var(--dg)}.b.s{padding:4px 10px;font-size:13px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.grid .card{margin:0}.st b{display:block;font:700 28px Georgia,serif}
+.mu{color:var(--mu)}.bad{color:var(--dg)}.ok{color:var(--ok)}
+input,select{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+label{display:block;margin-bottom:10px;font-size:13px;color:var(--mu)}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--bd);white-space:nowrap;font-size:14px}
+th{color:var(--mu);font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.row>*{flex:1;min-width:150px}
+.mo{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.md{background:var(--card);padding:20px;border-radius:12px;width:100%;max-width:420px;max-height:90%;overflow:auto}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:8px;z-index:30;max-width:90%}
+.login{max-width:380px;margin:6vh auto}
+@media print{header,nav,.np{display:none}}
+</style></head>
+<body>
+<header id="hd"></header><nav id="nv"></nav><main id="app"></main>
+<script>
+let D,U,V='dash',Q='',RP='books';
+const RATE=5,DAYS=14,$=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sha=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(b=>b.toString(16).padStart(2,'0')).join('');
+const today=()=>new Date().toISOString().slice(0,10);
+const addD=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
+const diff=(a,b)=>Math.round((new Date(a)-new Date(b))/864e5);
+const save=()=>{try{localStorage.setItem('lms',JSON.stringify(D))}catch(e){}};
+const nm=id=>(D.members.find(m=>m.id==id)||{name:'(deleted)'}).name;
+const tt=id=>(D.books.find(b=>b.id==id)||{title:'(deleted)'}).title;
+const pad=(p,n)=>p+String(n).padStart(3,'0');
+function toast(m,e){const t=document.createElement('div');t.className='toast';t.textContent=m;if(e)t.style.background='#b42318';document.body.append(t);setTimeout(()=>t.remove(),2400)}
+const tbl=(h,r)=>`<div class="tw"><table><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${r.length?r.map(c=>`<tr>${c.map(x=>`<td>${x}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${h.length}" class="mu">No records yet</td></tr>`}</tbody></table></div>`;
+function modal(t,f,cb){const m=document.createElement('div');m.className='mo';
+m.innerHTML=`<form class="md"><h3>${t}</h3>${f.map(x=>`<label>${x[1]}${x[2]=='select'?`<select name="${x[0]}">${x[5].map(o=>`<option ${o==x[3]?'selected':''}>${o}</option>`).join('')}</select>`:`<input name="${x[0]}" type="${x[2]}" value="${esc(x[3])}" ${x[4]||''} ${(x[4]||'').includes('data-o')?'':'required'}>`}</label>`).join('')}<div class="row"><button class="b">Save</button><button type="button" class="b g" onclick="this.closest('.mo').remove()">Cancel</button></div></form>`;
+document.body.append(m);m.querySelector('form').onsubmit=e=>{e.preventDefault();if(cb(Object.fromEntries(new FormData(e.target)))!==false)m.remove()}}
+function ask(msg,cb){const d=document.createElement('div');d.className='mo';d.innerHTML=`<div class="md"><p>${msg}</p><div class="row"><button class="b d" id="y">Yes, continue</button><button class="b g" id="n">Cancel</button></div></div>`;document.body.append(d);d.querySelector('#n').onclick=()=>d.remove();d.querySelector('#y').onclick=()=>{d.remove();cb()}}
+
+async function seed(){const p=async(n,pw,role,mid)=>({username:n,hash:await sha(pw),role,mid});
+D={n:{b:7,m:4,t:1,f:1},
+users:[await p('admin','admin123','admin'),await p('librarian','lib123','librarian'),await p('student','stud123','student','M001')],
+books:[['978-0134685991','Effective Java','Joshua Bloch','Addison-Wesley',3],['978-0132350884','Clean Code','Robert C. Martin','Prentice Hall',2],['978-0201633610','Design Patterns','Erich Gamma','Addison-Wesley',2],['978-0262033848','Introduction to Algorithms','Thomas H. Cormen','MIT Press',4],['978-0321125217','Domain-Driven Design','Eric Evans','Addison-Wesley',1],['978-1449355739','Flask Web Development','Miguel Grinberg','OReilly',2]].map((b,i)=>({id:pad('B',i+1),isbn:b[0],title:b[1],author:b[2],publisher:b[3],qty:b[4],avail:b[4]})),
+members:[['Aarav Sharma','aarav@example.com','9876543210','CSE'],['Diya Patel','diya@example.com','9876501234','IT'],['Rohan Mehta','rohan@example.com','9123456780','ECE']].map((m,i)=>({id:pad('M',i+1),name:m[0],email:m[1],phone:m[2],dept:m[3]})),
+tx:[],fines:[]};save()}
+
+const NAV={admin:[['dash','Dashboard'],['books','Books'],['members','Members'],['issue','Issue / Return'],['fines','Fines'],['rep','Reports'],['users','Users']],
+librarian:[['dash','Dashboard'],['books','Books'],['members','Members'],['issue','Issue / Return'],['fines','Fines'],['rep','Reports']],
+student:[['books','Search Books'],['my','My Books']]};
+
+function login(){$('#app').innerHTML=`<div class="card login"><h2>Sign in to the library</h2><form id="lf"><label>Username<input name="u" required autocomplete="username"></label><label>Password<input name="p" type="password" required autocomplete="current-password"></label><button class="b" style="width:100%">Login</button></form><p class="mu" style="font-size:13px;margin-bottom:0">Demo accounts: admin / admin123 · librarian / lib123 · student / stud123</p></div>`;
+$('#lf').onsubmit=async e=>{e.preventDefault();const f=e.target,h=await sha(f.p.value);const u=D.users.find(x=>x.username==f.u.value&&x.hash==h);
+if(!u)return toast('Wrong username or password',1);U=u;try{sessionStorage.setItem('lmsu',u.username)}catch(x){}V=u.role=='student'?'books':'dash';render()}}
+function logout(){U=null;try{sessionStorage.removeItem('lmsu')}catch(e){}render()}
+
+function render(){
+if(!U){$('#hd').innerHTML='<h1>Library Management System</h1>';$('#nv').innerHTML='';return login()}
+$('#hd').innerHTML=`<h1>Library Management System</h1><span>${esc(U.username)} (${U.role}) <button class="b g s" onclick="logout()">Logout</button></span>`;
+const N=NAV[U.role];if(!N.some(n=>n[0]==V))V=N[0][0];
+$('#nv').innerHTML=N.map(n=>`<button class="b g ${n[0]==V?'on':''}" onclick="V='${n[0]}';render()">${n[1]}</button>`).join('');
+$('#app').innerHTML=VW[V]();if(V=='books')drawBooks()}
+
+const VW={
+dash(){const o=D.tx.filter(t=>!t.ret),od=o.filter(t=>today()>t.due),un=D.fines.filter(f=>!f.paid).reduce((a,f)=>a+f.amt,0);
+const s=[['Book titles',D.books.length],['Total copies',D.books.reduce((a,b)=>a+b.qty,0)],['Members',D.members.length],['Issued now',o.length],['Overdue',od.length],['Unpaid fines','₹'+un]];
+return `<h2>Dashboard</h2><div class="grid" style="margin-bottom:16px">${s.map(x=>`<div class="card st"><span class="mu">${x[0]}</span><b>${x[1]}</b></div>`).join('')}</div><div class="card"><h3>Overdue books</h3>${tbl(['Member','Book','Due','Days late','Fine so far'],od.map(t=>[esc(nm(t.mid)),esc(tt(t.bid)),t.due,diff(today(),t.due),'₹'+diff(today(),t.due)*RATE]))}</div><button class="b g s" onclick="ask('Reset all data back to the demo data?',()=>seed().then(()=>{U=D.users.find(u=>u.username==U.username);render()}))">Reset demo data</button>`},
+books(){const st=U.role!='student';return `<h2>${st?'Books':'Search Books'}</h2><div class="card"><div class="row"><input placeholder="Search by title, author or ISBN" value="${esc(Q)}" oninput="Q=this.value;drawBooks()">${st?'<button class="b" onclick="bookForm()">Add book</button>':''}</div></div><div class="card" id="bt"></div>`},
+members(){return `<h2>Members</h2><div class="card"><button class="b" onclick="memForm()">Add member</button></div><div class="card">${tbl(['ID','Name','Email','Phone','Department',''],D.members.map(m=>[m.id,esc(m.name),esc(m.email),esc(m.phone),esc(m.dept),`<button class="b g s" onclick="memForm('${m.id}')">Edit</button> <button class="b d s" onclick="delMem('${m.id}')">Delete</button>`]))}</div>`},
+issue(){const av=D.books.filter(b=>b.avail>0),o=D.tx.filter(t=>!t.ret);
+return `<h2>Issue / Return</h2><div class="card"><h3>Issue a book</h3><form onsubmit="doIssue(event)"><div class="row"><label>Member<select name="m" required>${D.members.map(m=>`<option value="${m.id}">${m.id} – ${esc(m.name)}</option>`).join('')}</select></label><label>Book<select name="b" required>${av.map(b=>`<option value="${b.id}">${esc(b.title)} (${b.avail} left)</option>`).join('')}</select></label><label>Issue date<input type="date" name="d" value="${today()}" max="${today()}" required></label><button class="b">Issue book</button></div></form><p class="mu" style="margin:8px 0 0;font-size:13px">Due after ${DAYS} days. Pick an older issue date to test overdue fines.</p></div><div class="card"><h3>Currently issued</h3>${tbl(['Txn','Member','Book','Issued','Due','Status',''],o.map(t=>{const l=diff(today(),t.due);return [t.id,esc(nm(t.mid)),esc(tt(t.bid)),t.issue,t.due,l>0?`<span class="bad">${l} day(s) late · ₹${l*RATE}</span>`:'<span class="ok">On time</span>',`<button class="b s" onclick="doReturn('${t.id}')">Return</button>`]}))}</div>`},
+fines(){return `<h2>Fines</h2><div class="card">${tbl(['Fine','Txn','Member','Book','Days late','Amount','Status'],D.fines.map(f=>{const t=D.tx.find(x=>x.id==f.tid)||{};return [f.id,f.tid,esc(nm(t.mid)),esc(tt(t.bid)),f.days,'₹'+f.amt,f.paid?'<span class="ok">Paid</span>':`<button class="b s" onclick="pay('${f.id}')">Mark paid</button>`]}))}</div><p class="mu">Fine rate: ₹${RATE} per day after the due date.</p>`},
+rep(){const R={books:[['ID','ISBN','Title','Author','Copies','Available'],D.books.map(b=>[b.id,esc(b.isbn),esc(b.title),esc(b.author),b.qty,b.avail])],
+members:[['ID','Name','Email','Phone','Dept','Books held'],D.members.map(m=>[m.id,esc(m.name),esc(m.email),esc(m.phone),esc(m.dept),D.tx.filter(t=>t.mid==m.id&&!t.ret).length])],
+transactions:[['Txn','Member','Book','Issued','Due','Returned'],D.tx.map(t=>[t.id,esc(nm(t.mid)),esc(tt(t.bid)),t.issue,t.due,t.ret||'—'])],
+fines:[['Fine','Txn','Days late','Amount','Status'],D.fines.map(f=>[f.id,f.tid,f.days,'₹'+f.amt,f.paid?'Paid':'Unpaid'])]};
+return `<h2>Reports</h2><div class="card np"><div class="row">${Object.keys(R).map(k=>`<button class="b ${k==RP?'':'g'}" onclick="RP='${k}';render()">${k[0].toUpperCase()+k.slice(1)}</button>`).join('')}<button class="b g" onclick="print()">Print</button></div></div><div class="card">${tbl(...R[RP])}</div>`},
+users(){return `<h2>Users</h2><div class="card"><button class="b" onclick="userForm()">Add user</button></div><div class="card">${tbl(['Username','Role','Member ID',''],D.users.map(u=>[esc(u.username),u.role,esc(u.mid||'—'),u.username==U.username?'':`<button class="b d s" onclick="delUser('${esc(u.username)}')">Delete</button>`]))}</div>`},
+my(){const t=D.tx.filter(x=>x.mid==U.mid);return `<h2>My Books</h2><div class="card">${U.mid?tbl(['Book','Issued','Due','Returned','Status'],t.map(x=>{const l=diff(today(),x.due);return [esc(tt(x.bid)),x.issue,x.due,x.ret||'—',x.ret?'Returned':l>0?`<span class="bad">Overdue ${l} day(s) · ₹${l*RATE}</span>`:'<span class="ok">Issued</span>']})):'<p class="mu">No member profile is linked to this account.</p>'}</div>`}
+};
+
+function drawBooks(){const q=Q.toLowerCase(),st=U.role!='student';
+$('#bt').innerHTML=tbl(['ID','ISBN','Title','Author','Publisher','Available',...(st?['']:[])],D.books.filter(b=>[b.title,b.author,b.isbn].some(x=>x.toLowerCase().includes(q))).map(b=>[b.id,esc(b.isbn),esc(b.title),esc(b.author),esc(b.publisher),`<span class="${b.avail?'ok':'bad'}">${b.avail}/${b.qty}</span>`,...(st?[`<button class="b g s" onclick="bookForm('${b.id}')">Edit</button> <button class="b d s" onclick="delBook('${b.id}')">Delete</button>`]:[])]))}
+function bookForm(id){const b=D.books.find(x=>x.id==id)||{};
+modal(id?'Edit book':'Add book',[['isbn','ISBN','text',b.isbn],['title','Title','text',b.title],['author','Author','text',b.author],['publisher','Publisher','text',b.publisher],['qty','Quantity','number',b.qty??1,'min="1"']],o=>{o.qty=+o.qty;
+if(D.books.some(x=>x.isbn===o.isbn&&x.id!=id))return toast('This ISBN already exists',1),false;
+if(id){const iss=b.qty-b.avail;if(o.qty<iss)return toast('Quantity is less than copies already issued',1),false;Object.assign(b,o,{avail:o.qty-iss})}
+else D.books.push({id:pad('B',D.n.b++),...o,avail:o.qty});save();render()})}
+function delBook(id){if(D.tx.some(t=>t.bid==id&&!t.ret))return toast('This book is currently issued',1);ask('Delete this book?',()=>{D.books=D.books.filter(b=>b.id!=id);save();render()})}
+function memForm(id){const m=D.members.find(x=>x.id==id)||{};
+modal(id?'Edit member':'Add member',[['name','Name','text',m.name],['email','Email','email',m.email],['phone','Phone','tel',m.phone,'pattern="[0-9]{10}" title="10-digit number"'],['dept','Department','text',m.dept]],o=>{if(id)Object.assign(m,o);else D.members.push({id:pad('M',D.n.m++),...o});save();render()})}
+function delMem(id){if(D.tx.some(t=>t.mid==id&&!t.ret))return toast('Member still has issued books',1);ask('Delete this member?',()=>{D.members=D.members.filter(m=>m.id!=id);save();render()})}
+function doIssue(e){e.preventDefault();const f=e.target,m=D.members.find(x=>x.id==f.m.value),b=D.books.find(x=>x.id==f.b.value),d=f.d.value||today();
+if(!m)return toast('Invalid member ID',1);if(!b)return toast('Invalid book ID',1);if(b.avail<1)return toast('Book not available',1);
+if(D.tx.filter(t=>t.mid==m.id&&!t.ret).length>=3)return toast('Member already has 3 books issued',1);
+D.tx.push({id:pad('T',D.n.t++),bid:b.id,mid:m.id,issue:d,due:addD(d,DAYS),ret:null});b.avail--;save();render();toast('Issued "'+b.title+'" to '+m.name)}
+function doReturn(id){const t=D.tx.find(x=>x.id==id),b=D.books.find(x=>x.id==t.bid);t.ret=today();const l=Math.max(0,diff(t.ret,t.due));
+if(b)b.avail++;if(l>0)D.fines.push({id:pad('F',D.n.f++),tid:t.id,days:l,amt:l*RATE,paid:false});save();render();toast(l?`Returned late. Fine: ₹${l*RATE}`:'Returned on time')}
+function pay(id){D.fines.find(f=>f.id==id).paid=true;save();render()}
+function userForm(){modal('Add user',[['username','Username','text','','pattern="[A-Za-z0-9_]{3,20}" title="3-20 letters, numbers or _"'],['password','Password (min 6 characters)','password','','minlength="6"'],['role','Role','select','student',['admin','librarian','student']],['mid','Member ID (students only)','text','','data-o']],o=>{
+if(D.users.some(u=>u.username==o.username))return toast('Username already taken',1),false;
+if(o.role=='student'&&!D.members.some(m=>m.id==o.mid))return toast('Enter a valid member ID for a student',1),false;
+sha(o.password).then(h=>{D.users.push({username:o.username,hash:h,role:o.role,mid:o.role=='student'?o.mid:undefined});save();render()})})}
+function delUser(n){ask('Delete user '+esc(n)+'?',()=>{D.users=D.users.filter(u=>u.username!=n);save();render()})}
+
+(async()=>{try{D=JSON.parse(localStorage.getItem('lms'))}catch(e){}
+if(!D||!D.users)await seed();
+try{const s=sessionStorage.getItem('lmsu');U=D.users.find(u=>u.username==s)}catch(e){}
+if(U&&U.role=='student')V='books';render()})();
+</script></body></html>
